@@ -1,14 +1,12 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUpRight,
   BarChart3,
   BriefcaseBusiness,
+  Check,
   ChevronDown,
   Compass,
   Layers3,
@@ -24,7 +22,7 @@ const navItems = [
   { label: 'Tata Kelola', href: '#tata-kelola' },
 ];
 
-const supportAreas = [
+const services = [
   {
     number: '01',
     title: 'Pendanaan strategis',
@@ -86,350 +84,360 @@ const principles = [
   },
 ];
 
-function App() {
+const stories = [
+  {
+    image: '/dgc-building-day.webp',
+    alt: 'Sudut pandang ke atas pada gedung-gedung perkantoran modern di siang hari',
+    number: '01',
+    title: 'Menyelaraskan arah',
+    text: 'Memulai dari pemahaman yang sama tentang prioritas, konteks, dan tujuan perusahaan.',
+    label: 'Arah strategis',
+  },
+  {
+    image: '/dgc-building-hero.webp',
+    alt: 'Gedung perkantoran modern saat senja dengan cahaya hangat di dalamnya',
+    number: '02',
+    title: 'Menjaga disiplin',
+    text: 'Menghubungkan rencana dengan pengelolaan yang terukur dan pertimbangan jangka panjang.',
+    label: 'Pengelolaan',
+  },
+  {
+    image: '/dgc-building-contact.webp',
+    alt: 'Menara perkantoran bercahaya pada malam hari',
+    number: '03',
+    title: 'Tumbuh dengan tanggung jawab',
+    text: 'Mendorong kemajuan melalui peran yang jelas, pemantauan, dan akuntabilitas.',
+    label: 'Akuntabilitas',
+  },
+];
+
+export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedService, setExpandedService] = useState<string | null>(null);
-  const topbarRef = useRef<HTMLElement>(null);
-  const menuToggleRef = useRef<HTMLButtonElement>(null);
-  const heroRef = useRef<HTMLElement>(null);
-
-  const closeMenu = () => setMenuOpen(false);
+  const [activeStory, setActiveStory] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const storyTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const story = stories[activeStory];
 
   useEffect(() => {
-    const updateScrollState = () => {
-      const scrollableHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const progress =
-        scrollableHeight > 0 ? window.scrollY / scrollableHeight : 0;
-
-      document.documentElement.style.setProperty(
-        '--page-progress',
-        String(Math.min(1, Math.max(0, progress))),
-      );
-      topbarRef.current?.classList.toggle('is-scrolled', window.scrollY > 24);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 18);
+      const height = document.documentElement.scrollHeight - window.innerHeight;
+      progressRef.current?.style.setProperty('--page-progress', String(height > 0 ? window.scrollY / height : 0));
     };
-
-    updateScrollState();
-    window.addEventListener('scroll', updateScrollState, { passive: true });
-    window.addEventListener('resize', updateScrollState);
-    return () => {
-      window.removeEventListener('scroll', updateScrollState);
-      window.removeEventListener('resize', updateScrollState);
-    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
-
-    const closeOnEscape = (event: KeyboardEvent) => {
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setMenuOpen(false);
-        menuToggleRef.current?.focus();
+        toggleRef.current?.focus();
       }
     };
-
-    window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [menuOpen]);
 
-  const handleHeroPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
-    if (
-      event.pointerType !== 'mouse' ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      return;
-    }
+  const closeMenu = () => setMenuOpen(false);
+  const changeStory = (direction: number) => {
+    setActiveStory((current) => (current + direction + stories.length) % stories.length);
+  };
 
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - bounds.left) / bounds.width) * 100;
-    const y = ((event.clientY - bounds.top) / bounds.height) * 100;
-    heroRef.current?.style.setProperty('--spot-x', `${x}%`);
-    heroRef.current?.style.setProperty('--spot-y', `${y}%`);
-    heroRef.current?.style.setProperty('--photo-x', `${50 + (x - 50) * 0.04}%`);
+  const onStoryKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const next = (activeStory + direction + stories.length) % stories.length;
+      setActiveStory(next);
+      storyTabRefs.current[next]?.focus();
+    }
   };
 
   return (
-    <div className="site-shell" id="atas">
-      <header className="topbar" ref={topbarRef}>
-        <span className="scroll-progress" aria-hidden="true" />
-        <div className="container nav-inner">
-          <a className="brand" href="#atas" aria-label="PT Direction Global Capital — beranda" data-testid="link-home">
-            <span className="brand-mark" aria-hidden="true">
-              <ArrowUpRight />
-            </span>
-            <span className="brand-name">
-              DIRECTION
-              <small>GLOBAL CAPITAL</small>
-            </span>
+    <div className="dgc-update" id="atas">
+      <header className={`du-header${scrolled ? ' is-scrolled' : ''}`}>
+        <div className="du-progress" ref={progressRef} aria-hidden="true" />
+        <div className="du-container du-nav">
+          <a className="du-brand" href="#atas" aria-label="PT Direction Global Capital — beranda">
+            <span className="du-brand-mark"><ArrowUpRight aria-hidden="true" /></span>
+            <span>PT DIRECTION<small>GLOBAL CAPITAL</small></span>
           </a>
           <button
-            className="menu-toggle"
+            ref={toggleRef}
+            className="du-menu-toggle"
             type="button"
-            ref={menuToggleRef}
             aria-label={menuOpen ? 'Tutup navigasi' : 'Buka navigasi'}
             aria-expanded={menuOpen}
-            aria-controls="site-navigation"
+            aria-controls="du-navigation"
             onClick={() => setMenuOpen((open) => !open)}
-            data-testid="button-menu"
           >
             {menuOpen ? <X /> : <Menu />}
           </button>
-          <nav id="site-navigation" className={`nav-links${menuOpen ? ' is-open' : ''}`} aria-label="Navigasi utama">
+          <nav id="du-navigation" className={`du-nav-links${menuOpen ? ' is-open' : ''}`} aria-label="Navigasi utama">
             {navItems.map((item) => (
-              <a key={item.href} href={item.href} onClick={closeMenu} data-testid={`link-nav-${item.label.toLowerCase().replaceAll(' ', '-')}`}>
-                {item.label}
-              </a>
+              <a key={item.href} href={item.href} onClick={closeMenu}>{item.label}</a>
             ))}
-            <a className="nav-cta" href="#kontak" onClick={closeMenu} data-testid="link-nav-kontak">
-              Hubungi kami <ArrowUpRight size={13} aria-hidden="true" />
+            <a className="du-nav-cta" href="#kontak" onClick={closeMenu}>
+              Hubungi kami <ArrowUpRight aria-hidden="true" />
             </a>
           </nav>
         </div>
       </header>
 
       <main>
-        <section
-          className="hero"
-          aria-labelledby="hero-title"
-          ref={heroRef}
-          onPointerMove={handleHeroPointerMove}
-        >
-          <div className="container hero-grid">
-            <div className="hero-copy">
-              <span className="eyebrow">Holding company · Batam, Indonesia</span>
-              <h1 id="hero-title">
-                Arah yang jelas.
-                <br />
-                <em>Pertumbuhan</em> yang terukur.
-              </h1>
+        <section className="du-hero" aria-labelledby="du-hero-title">
+          <div className="du-hero-image" aria-hidden="true" />
+          <div className="du-hero-shade" aria-hidden="true" />
+          <div className="du-hero-lines" aria-hidden="true" />
+          <div className="du-container du-hero-content">
+            <div className="du-hero-copy">
+              <div className="du-kicker du-kicker-light"><span /> Holding company <i /> Batam, Indonesia</div>
+              <h1 id="du-hero-title">Arah yang jelas.<br /><em>Pertumbuhan</em> yang terukur.</h1>
               <p>
-                PT Direction Global Capital mendukung pertumbuhan dan pengelolaan
-                perusahaan dalam lingkup grup melalui arahan strategis, disiplin
-                keuangan, dan tata kelola yang bertanggung jawab.
+                PT Direction Global Capital mendukung pertumbuhan dan pengelolaan perusahaan
+                dalam lingkup grup melalui arahan strategis, disiplin keuangan, dan tata kelola
+                yang bertanggung jawab.
               </p>
-              <div className="hero-actions">
-                <a className="button button-primary" href="#peran" data-testid="link-explore">
-                  Kenali peran kami <ArrowDown aria-hidden="true" />
-                </a>
-                <a className="button button-outline" href="#kontak" data-testid="link-discussion">
-                  Mulai diskusi <ArrowUpRight aria-hidden="true" />
-                </a>
+              <div className="du-hero-actions">
+                <a className="du-button du-button-bright" href="#peran">Kenali peran kami <ArrowDown aria-hidden="true" /></a>
+                <a className="du-button du-button-quiet" href="#kontak">Mulai diskusi <ArrowUpRight aria-hidden="true" /></a>
               </div>
-              <div className="hero-meta" aria-label="Informasi perusahaan">
-                <span><b>64210</b> KBLI</span>
-                <span><b>Batam</b> Indonesia</span>
-                <span><b>Mandiri</b> dalam prinsip</span>
-              </div>
+              <div className="du-hero-note"><span className="du-note-rule" /> Dukungan di tingkat kepemilikan dan koordinasi</div>
             </div>
-            <div className="hero-visual" aria-label="Identitas Direction Global Capital">
-              <div className="logo-frame">
-                <img src="/dgc-logo.png" alt="Logo perak Direction Global Capital dengan simbol arah pertumbuhan" width="824" height="824" />
-                <span className="orb-caption">Direction · Growth · Stewardship</span>
+            <div className="du-logo-stage" role="img" aria-label="Logo perak PT Direction Global Capital dengan simbol pertumbuhan">
+              <span className="du-stage-orbit du-orbit-a" />
+              <span className="du-stage-orbit du-orbit-b" />
+              <div className="du-logo-disc">
+                <img src="/dgc-logo-transparent.png" alt="" />
               </div>
+              <span className="du-stage-caption">Direction <b>·</b> Growth <b>·</b> Stewardship</span>
             </div>
           </div>
-          <a className="scroll-note" href="#tentang" aria-label="Gulir untuk menjelajahi">
-            <span>GULIR UNTUK MENJELAJAH</span>
-            <ArrowDown aria-hidden="true" />
-          </a>
+          <a className="du-scroll-cue" href="#tentang"><span>SCROLL TO EXPLORE</span><ArrowDown aria-hidden="true" /></a>
+          <div className="du-hero-index">01 <span /> 08</div>
         </section>
 
-        <section className="intro" id="tentang" aria-labelledby="intro-title">
-          <div className="container intro-grid">
-            <aside className="intro-aside">
-              <span className="index">01 / TENTANG PERUSAHAAN</span>
+        <section className="du-intro du-section" id="tentang" aria-labelledby="du-intro-title">
+          <div className="du-container du-intro-grid">
+            <aside className="du-side-note">
+              <span className="du-index-label">01 / TENTANG PERUSAHAAN</span>
               <p>Peran yang terukur di balik perusahaan yang terus berkembang.</p>
+              <div className="du-side-mark">DGC<span>—</span>01</div>
             </aside>
-            <div>
-              <span className="eyebrow">Tentang Direction</span>
-              <h2 id="intro-title" className="section-title">
-                Membangun <em>fondasi</em> agar bisnis bergerak dengan keyakinan.
-              </h2>
-              <p className="intro-text">
-                <strong>PT Direction Global Capital adalah perusahaan holding</strong>{' '}
-                yang berfokus pada dukungan pertumbuhan dan pengelolaan yang disiplin
-                bagi perusahaan di bawah lingkupnya. Kami bekerja di tingkat
-                kepemilikan dan koordinasi—membantu menyelaraskan arah, sumber daya,
-                serta pengawasan tanpa mengambil alih keahlian tim operasional.
+            <div className="du-intro-main">
+              <div className="du-kicker"><span /> Tentang Direction</div>
+              <h2 id="du-intro-title">Membangun <em>fondasi</em> agar bisnis bergerak dengan keyakinan.</h2>
+              <p className="du-lead">
+                <strong>PT Direction Global Capital adalah perusahaan holding</strong> yang berfokus
+                pada dukungan pertumbuhan dan pengelolaan yang disiplin bagi perusahaan di bawah
+                lingkupnya. Kami bekerja di tingkat kepemilikan dan koordinasi—membantu menyelaraskan
+                arah, sumber daya, serta pengawasan tanpa mengambil alih keahlian tim operasional.
               </p>
-              <div className="principle-line">
-                <div><b>01 — Arah</b>Prioritas yang selaras</div>
-                <div><b>02 — Disiplin</b>Pengelolaan yang terukur</div>
-                <div><b>03 — Tumbuh</b>Kemajuan berkelanjutan</div>
+              <div className="du-principle-strip">
+                <div><span>01</span><b>Arah</b><small>Prioritas yang selaras</small></div>
+                <div><span>02</span><b>Disiplin</b><small>Pengelolaan terukur</small></div>
+                <div><span>03</span><b>Tumbuh</b><small>Kemajuan berkelanjutan</small></div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="approach" id="peran" aria-labelledby="approach-title">
-          <div className="container">
-            <div className="approach-head">
+        <section
+          className="du-story du-section"
+          id="cerita"
+          aria-labelledby="du-story-title"
+          onKeyDown={onStoryKeyDown}
+          tabIndex={0}
+        >
+          <div className="du-container">
+            <div className="du-story-heading">
               <div>
-                <span className="eyebrow">Ruang lingkup dukungan</span>
-                <h2 id="approach-title" className="section-title">
-                  Peran kami, <em>dirancang untuk mendukung.</em>
-                </h2>
+                <div className="du-kicker du-kicker-light"><span /> Perspektif kami</div>
+                <h2 id="du-story-title">Perjalanan yang dimulai dari <em>arah.</em></h2>
               </div>
-              <p className="section-intro">
-                Dukungan holding yang terkoordinasi, berpijak pada kebutuhan
-                perusahaan dan prinsip tata kelola yang sehat.
-              </p>
+              <p>Peran holding hadir dalam tahapan yang saling terhubung—dengan konteks perusahaan sebagai titik awal.</p>
             </div>
-            <div className="service-layout">
-              {supportAreas.map(({ number, title, description, detail, icon: Icon }) => (
-                <article
-                  className={`service-item${expandedService === number ? ' is-expanded' : ''}`}
-                  key={number}
-                  data-testid={`card-area-${number}`}
-                >
-                  <div className="service-top">
-                    <span className="service-number">{number} / 04</span>
-                    <span className="service-icon"><Icon aria-hidden="true" /></span>
+            <div className="du-story-stage" id="du-story-panel" role="tabpanel" aria-labelledby={`du-story-tab-${story.number}`} aria-live="polite">
+              <div className="du-story-photo">
+                <img key={story.image} src={story.image} alt={story.alt} />
+                <span className="du-photo-label">Ilustrasi arsitektur · bukan properti perusahaan</span>
+                <span className="du-photo-count">{story.number} <i>/</i> 03</span>
+              </div>
+              <div className="du-story-panel">
+                <span className="du-story-label">{story.label}</span>
+                <h3>{story.title}</h3>
+                <p>{story.text}</p>
+                <div className="du-story-bottom">
+                  <div className="du-story-dots" role="tablist" aria-label="Tahapan cerita">
+                    {stories.map((item, index) => (
+                      <button
+                        key={item.number}
+                        ref={(element) => { storyTabRefs.current[index] = element; }}
+                        type="button"
+                        role="tab"
+                        id={`du-story-tab-${item.number}`}
+                        aria-selected={activeStory === index}
+                        tabIndex={activeStory === index ? 0 : -1}
+                        aria-controls="du-story-panel"
+                        aria-label={`Tampilkan tahapan ${item.number}: ${item.title}`}
+                        onClick={() => setActiveStory(index)}
+                      >
+                        <span>{item.number}</span>
+                      </button>
+                    ))}
                   </div>
-                  <h3>{title}</h3>
-                  <p>{description}</p>
-                  <div
-                    className="service-detail"
-                    id={`service-detail-${number}`}
-                    hidden={expandedService !== number}
-                  >
-                    <span>Fokus dukungan</span>
-                    <p>{detail}</p>
+                  <div className="du-story-arrows">
+                    <button type="button" aria-label="Tahap sebelumnya" onClick={() => changeStory(-1)}><ArrowLeft /></button>
+                    <button type="button" aria-label="Tahap berikutnya" onClick={() => changeStory(1)}><ArrowRight /></button>
                   </div>
-                  <button
-                    className="service-more"
-                    type="button"
-                    aria-expanded={expandedService === number}
-                    aria-controls={`service-detail-${number}`}
-                    onClick={() =>
-                      setExpandedService((current) => current === number ? null : number)
-                    }
-                  >
-                    {expandedService === number ? 'Tutup penjelasan' : 'Jelajahi peran'}
-                    <ChevronDown
-                      aria-hidden="true"
-                      className={expandedService === number ? 'is-open' : ''}
-                    />
-                  </button>
-                </article>
-              ))}
+                </div>
+              </div>
             </div>
+            <p className="du-story-hint">Gunakan tombol panah kiri dan kanan saat bagian ini dipilih untuk menjelajahi tahapan.</p>
           </div>
         </section>
 
-        <section className="model" aria-labelledby="model-title">
-          <div className="container model-grid">
-            <div className="model-copy">
-              <span className="eyebrow">Cara kami bekerja</span>
-              <h2 id="model-title" className="section-title">
-                Satu arah. <em>Peran yang saling menguatkan.</em>
-              </h2>
-              <p className="section-intro">
-                Sebagai holding company, Direction Global Capital menjalankan
-                fungsi koordinasi dan dukungan bagi perusahaan di dalam lingkup
-                grup. Pendekatan kami menghubungkan sasaran strategis dengan
-                praktik pengelolaan sehari-hari.
-              </p>
-              <p className="model-note">
-                Setiap kebutuhan dibahas secara kontekstual. Bentuk dukungan dan
-                kerja sama ditentukan melalui dialog langsung serta kesepakatan
-                yang jelas antar pihak.
-              </p>
-            </div>
-            <div className="orbit-panel" role="img" aria-label="Diagram hubungan fungsi holding dan dukungan bagi perusahaan">
-              <div className="orbit-lines" />
-              <span className="orbit-dot dot-a" /><span className="orbit-dot dot-b" />
-              <span className="orbit-dot dot-c" /><span className="orbit-dot dot-d" />
-              <div className="orbit-center"><span>Direction Global Capital</span></div>
-              <div className="orbit-point point-one"><strong>Arah strategis</strong><span>Keselarasan sasaran dan prioritas</span></div>
-              <div className="orbit-point point-two"><strong>Pengelolaan</strong><span>Keuangan dan sumber daya</span></div>
-              <div className="orbit-point point-three"><strong>Pengawasan</strong><span>Pemantauan dan akuntabilitas</span></div>
-              <div className="orbit-point point-four"><strong>Dukungan</strong><span>Konsultasi dan layanan usaha</span></div>
-            </div>
-          </div>
-        </section>
-
-        <section className="principles" id="prinsip" aria-labelledby="principles-title">
-          <div className="container">
-            <div className="principles-head">
+        <section className="du-services du-section" id="peran" aria-labelledby="du-services-title">
+          <div className="du-container">
+            <div className="du-section-head">
               <div>
-                <span className="eyebrow">Yang kami pegang</span>
-                <h2 id="principles-title" className="section-title">
-                  Kemajuan berarti <em>lebih dari sekadar angka.</em>
-                </h2>
+                <div className="du-kicker"><span /> Ruang lingkup dukungan</div>
+                <h2 id="du-services-title">Peran kami, <em>dirancang untuk mendukung.</em></h2>
               </div>
-              <p className="section-intro">
-                Cara kami bekerja sama pentingnya dengan tujuan yang ingin dicapai.
-              </p>
+              <p>Dukungan holding yang terkoordinasi, berpijak pada kebutuhan perusahaan dan prinsip tata kelola yang sehat.</p>
             </div>
-            <div className="principles-list">
+            <div className="du-services-grid">
+              {services.map(({ number, title, description, detail, icon: Icon }) => {
+                const expanded = expandedService === number;
+                const panelId = `du-service-${number}`;
+                return (
+                  <article className={`du-service${expanded ? ' is-expanded' : ''}`} key={number}>
+                    <div className="du-service-top"><span>{number} <i>/ 04</i></span><Icon aria-hidden="true" /></div>
+                    <h3>{title}</h3>
+                    <p>{description}</p>
+                    <div className="du-service-detail" id={panelId} hidden={!expanded}>
+                      <small>Fokus dukungan</small><p>{detail}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="du-service-toggle"
+                      aria-expanded={expanded}
+                      aria-controls={panelId}
+                      onClick={() => setExpandedService(expanded ? null : number)}
+                    >
+                      {expanded ? 'Tutup penjelasan' : 'Jelajahi peran'} <ChevronDown className={expanded ? 'is-open' : ''} aria-hidden="true" />
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="du-model du-section" aria-labelledby="du-model-title">
+          <div className="du-container du-model-grid">
+            <div className="du-model-copy">
+              <div className="du-kicker"><span /> Cara kami bekerja</div>
+              <h2 id="du-model-title">Satu arah.<br /><em>Peran yang saling menguatkan.</em></h2>
+              <p>
+                Sebagai holding company, Direction Global Capital menjalankan fungsi koordinasi
+                dan dukungan bagi perusahaan di dalam lingkup grup. Pendekatan kami menghubungkan
+                sasaran strategis dengan praktik pengelolaan sehari-hari.
+              </p>
+              <div className="du-model-callout"><Check aria-hidden="true" /><span>Setiap bentuk dukungan berangkat dari dialog dan kesepakatan yang jelas.</span></div>
+            </div>
+            <div className="du-model-visual" role="img" aria-label="Hubungan fungsi holding dengan dukungan kepada perusahaan">
+              <div className="du-model-rails" />
+              <div className="du-model-core"><span>Direction<br />Global Capital</span></div>
+              <div className="du-model-node du-node-a"><b>Arah strategis</b><small>Keselarasan sasaran</small></div>
+              <div className="du-model-node du-node-b"><b>Pengelolaan</b><small>Keuangan & sumber daya</small></div>
+              <div className="du-model-node du-node-c"><b>Pengawasan</b><small>Pemantauan & akuntabilitas</small></div>
+              <div className="du-model-node du-node-d"><b>Dukungan</b><small>Konsultasi & layanan usaha</small></div>
+              <span className="du-model-caption">KOORDINASI DI TINGKAT HOLDING</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="du-principles du-section" id="prinsip" aria-labelledby="du-principles-title">
+          <div className="du-container">
+            <div className="du-section-head">
+              <div>
+                <div className="du-kicker"><span /> Yang kami pegang</div>
+                <h2 id="du-principles-title">Kemajuan berarti <em>lebih dari sekadar angka.</em></h2>
+              </div>
+              <p>Cara kami bekerja sama pentingnya dengan tujuan yang ingin dicapai.</p>
+            </div>
+            <div className="du-principles-list">
               {principles.map((principle, index) => (
-                <article className="principle" key={principle.title}>
-                  <span className="num">0{index + 1}</span>
+                <article className="du-principle" key={principle.title}>
+                  <span className="du-principle-no">0{index + 1}</span>
                   <h3>{principle.title}</h3>
                   <p>{principle.detail}</p>
+                  <ArrowUpRight aria-hidden="true" />
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="transparency" id="tata-kelola" aria-labelledby="governance-title">
-          <div className="container">
-            <div className="transparency-box">
-              <div>
-                <span className="eyebrow">Transparansi & tata kelola</span>
-                <h2 id="governance-title">Kejelasan adalah dasar kepercayaan.</h2>
+        <section className="du-governance du-section" id="tata-kelola" aria-labelledby="du-governance-title">
+          <div className="du-container">
+            <div className="du-governance-box">
+              <div className="du-governance-title">
+                <div className="du-kicker"><span /> Transparansi & tata kelola</div>
+                <h2 id="du-governance-title">Kejelasan adalah dasar kepercayaan.</h2>
               </div>
-              <div className="transparency-copy">
+              <div className="du-governance-copy">
                 <p>
-                  Kegiatan usaha PT Direction Global Capital tercatat dalam
-                  klasifikasi KBLI 64210 — aktivitas perusahaan holding. Peran
-                  kami adalah dukungan di tingkat holding, bukan penawaran
-                  layanan keuangan kepada masyarakat.
+                  PT Direction Global Capital menjalankan aktivitas perusahaan holding. Peran
+                  kami berfokus pada dukungan di tingkat holding, bukan penawaran layanan keuangan
+                  kepada masyarakat.
                 </p>
-                <div className="legal-note">
-                  Pembahasan peluang kemitraan dilakukan secara langsung dan
-                  transparan. Cakupan, tanggung jawab, serta ketentuan kerja sama
-                  disepakati terlebih dahulu sesuai kebutuhan para pihak.
+                <div className="du-legal-note">
+                  Pembahasan peluang kemitraan dilakukan secara langsung dan transparan. Cakupan,
+                  tanggung jawab, serta ketentuan kerja sama disepakati terlebih dahulu sesuai
+                  kebutuhan para pihak.
                 </div>
               </div>
+              <span className="du-governance-mark">GOVERNANCE / DGC</span>
             </div>
           </div>
         </section>
 
-        <section className="contact" id="kontak" aria-labelledby="contact-title">
-          <div className="container contact-inner">
-            <div className="contact-grid">
+        <section className="du-contact du-section" id="kontak" aria-labelledby="du-contact-title">
+          <div className="du-contact-photo" aria-hidden="true" />
+          <div className="du-contact-shade" aria-hidden="true" />
+          <div className="du-container du-contact-content">
+            <div className="du-contact-grid">
               <div>
-                <span className="eyebrow">Terhubung dengan kami</span>
-                <h2 id="contact-title">Mari mulai dengan <em>percakapan.</em></h2>
-                <p className="contact-lede">
-                  Untuk pertanyaan perusahaan atau diskusi kemitraan, hubungi tim
-                  kami. Kami terbuka untuk memahami kebutuhan dan menjajaki
-                  kesesuaian secara profesional.
+                <div className="du-kicker du-kicker-light"><span /> Terhubung dengan kami</div>
+                <h2 id="du-contact-title">Mari mulai dengan <em>percakapan.</em></h2>
+                <p className="du-contact-lede">
+                  Untuk pertanyaan perusahaan atau diskusi kemitraan, hubungi tim kami. Kami terbuka
+                  untuk memahami kebutuhan dan menjajaki kesesuaian secara profesional.
                 </p>
-                <div className="contact-location">
-                  <MapPin aria-hidden="true" />
-                  <span>Batam, Indonesia</span>
-                </div>
+                <div className="du-location"><MapPin aria-hidden="true" /> Batam, Indonesia</div>
               </div>
-              <div className="contact-links" aria-label="Informasi kontak">
-                <a className="contact-link" href="https://wa.me/6289505752359" target="_blank" rel="noreferrer" data-testid="link-whatsapp">
-                  <span><small>WhatsApp</small>+62 895-0575-2359</span>
-                  <ArrowUpRight aria-hidden="true" />
+              <div className="du-contact-links" aria-label="Informasi kontak">
+                <a href="https://wa.me/6289505752359" target="_blank" rel="noreferrer">
+                  <span><small>WhatsApp</small>+62 895-0575-2359</span><ArrowUpRight aria-hidden="true" />
                 </a>
-                <a className="contact-link" href="mailto:capitaldirectionglobal@gmail.com" data-testid="link-email">
-                  <span><small>Surat elektronik</small>capitaldirectionglobal@gmail.com</span>
-                  <ArrowUpRight aria-hidden="true" />
+                <a href="mailto:capitaldirectionglobal@gmail.com">
+                  <span><small>Surat elektronik</small>capitaldirectionglobal@gmail.com</span><ArrowUpRight aria-hidden="true" />
                 </a>
               </div>
             </div>
-            <footer className="footer">
-              <span className="footer-brand">PT Direction Global Capital</span>
-              <span>KBLI 64210 · Batam, Indonesia</span>
+            <footer className="du-footer">
+              <a className="du-footer-brand" href="#atas">PT Direction Global Capital</a>
+              <span>Holding company · Batam, Indonesia</span>
               <span>© {new Date().getFullYear()} Direction Global Capital</span>
-              <a className="back-top" href="#atas" data-testid="link-back-to-top">Kembali ke atas ↑</a>
+              <a className="du-back-top" href="#atas">Kembali ke atas ↑</a>
             </footer>
           </div>
         </section>
@@ -437,5 +445,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
