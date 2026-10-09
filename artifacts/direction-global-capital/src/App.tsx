@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import {
   ArrowDown,
   ArrowUpRight,
   BarChart3,
   BriefcaseBusiness,
+  ChevronDown,
   Compass,
   Layers3,
   MapPin,
@@ -24,6 +30,8 @@ const supportAreas = [
     title: 'Pendanaan strategis',
     description:
       'Mendukung kebutuhan pendanaan perusahaan dalam lingkup grup secara terarah, dengan mempertimbangkan prioritas dan rencana pertumbuhan.',
+    detail:
+      'Pembahasan kebutuhan modal diselaraskan dengan prioritas serta rencana pertumbuhan masing-masing perusahaan.',
     icon: BarChart3,
   },
   {
@@ -31,6 +39,8 @@ const supportAreas = [
     title: 'Manajemen keuangan & investasi',
     description:
       'Mendorong pengelolaan keuangan dan investasi perusahaan yang lebih terukur, selaras dengan sasaran dan tata kelola grup.',
+    detail:
+      'Fokus pada pengelolaan yang terukur, keselarasan sasaran, dan pertimbangan jangka panjang.',
     icon: Layers3,
   },
   {
@@ -38,6 +48,8 @@ const supportAreas = [
     title: 'Konsultasi & pengawasan operasional',
     description:
       'Memberikan arahan, pemantauan, dan dukungan konsultatif agar operasional perusahaan berjalan dengan disiplin dan akuntabel.',
+    detail:
+      'Meliputi pemetaan risiko, pemantauan, dan penguatan akuntabilitas dalam kegiatan operasional.',
     icon: Compass,
   },
   {
@@ -45,6 +57,8 @@ const supportAreas = [
     title: 'Layanan penunjang usaha',
     description:
       'Menghubungkan kebutuhan layanan pendukung yang relevan untuk memperkuat ketahanan dan kesiapan perusahaan dalam berkembang.',
+    detail:
+      'Dukungan disesuaikan dengan kebutuhan dan kesiapan perusahaan dalam lingkup grup.',
     icon: BriefcaseBusiness,
   },
 ];
@@ -74,12 +88,70 @@ const principles = [
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [expandedService, setExpandedService] = useState<string | null>(null);
+  const topbarRef = useRef<HTMLElement>(null);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
 
   const closeMenu = () => setMenuOpen(false);
 
+  useEffect(() => {
+    const updateScrollState = () => {
+      const scrollableHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+      const progress =
+        scrollableHeight > 0 ? window.scrollY / scrollableHeight : 0;
+
+      document.documentElement.style.setProperty(
+        '--page-progress',
+        String(Math.min(1, Math.max(0, progress))),
+      );
+      topbarRef.current?.classList.toggle('is-scrolled', window.scrollY > 24);
+    };
+
+    updateScrollState();
+    window.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      window.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+        menuToggleRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [menuOpen]);
+
+  const handleHeroPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    if (
+      event.pointerType !== 'mouse' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / bounds.width) * 100;
+    const y = ((event.clientY - bounds.top) / bounds.height) * 100;
+    heroRef.current?.style.setProperty('--spot-x', `${x}%`);
+    heroRef.current?.style.setProperty('--spot-y', `${y}%`);
+    heroRef.current?.style.setProperty('--photo-x', `${50 + (x - 50) * 0.04}%`);
+  };
+
   return (
     <div className="site-shell" id="atas">
-      <header className="topbar">
+      <header className="topbar" ref={topbarRef}>
+        <span className="scroll-progress" aria-hidden="true" />
         <div className="container nav-inner">
           <a className="brand" href="#atas" aria-label="PT Direction Global Capital — beranda" data-testid="link-home">
             <span className="brand-mark" aria-hidden="true">
@@ -93,6 +165,7 @@ function App() {
           <button
             className="menu-toggle"
             type="button"
+            ref={menuToggleRef}
             aria-label={menuOpen ? 'Tutup navigasi' : 'Buka navigasi'}
             aria-expanded={menuOpen}
             aria-controls="site-navigation"
@@ -115,7 +188,12 @@ function App() {
       </header>
 
       <main>
-        <section className="hero" aria-labelledby="hero-title">
+        <section
+          className="hero"
+          aria-labelledby="hero-title"
+          ref={heroRef}
+          onPointerMove={handleHeroPointerMove}
+        >
           <div className="container hero-grid">
             <div className="hero-copy">
               <span className="eyebrow">Holding company · Batam, Indonesia</span>
@@ -150,7 +228,10 @@ function App() {
               </div>
             </div>
           </div>
-          <span className="scroll-note" aria-hidden="true">GULIR UNTUK MENJELAJAH</span>
+          <a className="scroll-note" href="#tentang" aria-label="Gulir untuk menjelajahi">
+            <span>GULIR UNTUK MENJELAJAH</span>
+            <ArrowDown aria-hidden="true" />
+          </a>
         </section>
 
         <section className="intro" id="tentang" aria-labelledby="intro-title">
@@ -195,14 +276,41 @@ function App() {
               </p>
             </div>
             <div className="service-layout">
-              {supportAreas.map(({ number, title, description, icon: Icon }) => (
-                <article className="service-item" key={number} data-testid={`card-area-${number}`}>
+              {supportAreas.map(({ number, title, description, detail, icon: Icon }) => (
+                <article
+                  className={`service-item${expandedService === number ? ' is-expanded' : ''}`}
+                  key={number}
+                  data-testid={`card-area-${number}`}
+                >
                   <div className="service-top">
                     <span className="service-number">{number} / 04</span>
                     <span className="service-icon"><Icon aria-hidden="true" /></span>
                   </div>
                   <h3>{title}</h3>
                   <p>{description}</p>
+                  <div
+                    className="service-detail"
+                    id={`service-detail-${number}`}
+                    hidden={expandedService !== number}
+                  >
+                    <span>Fokus dukungan</span>
+                    <p>{detail}</p>
+                  </div>
+                  <button
+                    className="service-more"
+                    type="button"
+                    aria-expanded={expandedService === number}
+                    aria-controls={`service-detail-${number}`}
+                    onClick={() =>
+                      setExpandedService((current) => current === number ? null : number)
+                    }
+                  >
+                    {expandedService === number ? 'Tutup penjelasan' : 'Jelajahi peran'}
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={expandedService === number ? 'is-open' : ''}
+                    />
+                  </button>
                 </article>
               ))}
             </div>
