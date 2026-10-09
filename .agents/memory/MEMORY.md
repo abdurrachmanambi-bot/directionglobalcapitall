@@ -1,0 +1,1 @@
+- [DGC public positioning](dgc-public-positioning.md) — Keep marketing within the documented holding-company scope and off sensitive legal identifiers.

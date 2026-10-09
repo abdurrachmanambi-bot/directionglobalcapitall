@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "PT Direction Global Capital"
+description = "A polished Indonesian corporate landing page for PT Direction Global Capital, presenting its holding-company role, strategic capabilities, governance principles, and partnership contact."
+version = "1.0.0"
+id = "artifacts/direction-global-capital"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19916
+
+[services.development]
+run = "pnpm --filter @workspace/direction-global-capital run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/direction-global-capital", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/direction-global-capital/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19916"
+BASE_PATH = "/"
