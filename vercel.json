@@ -1,0 +1,27 @@
+
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "api-server": {
+      "root": "artifacts/api-server",
+      "framework": "express"
+    },
+    "direction-global-capital": {
+      "root": "artifacts/direction-global-capital",
+      "framework": "vite",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "api-server",
+          "format": "url",
+          "env": "API_SERVER_URL"
+        }
+      ]
+    },
+    "mockup-sandbox": {
+      "root": "artifacts/mockup-sandbox",
+      "framework": "vite"
+    }
+  },
+  "rewrites": []
+}
